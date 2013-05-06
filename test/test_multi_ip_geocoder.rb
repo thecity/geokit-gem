@@ -30,7 +30,7 @@ class MultiIpGeocoderTest < BaseGeocoderTest #:nodoc: all
 
   def test_invalid_provider
     temp = Geokit::Geocoders::ip_provider_order
-    Geokit::Geocoders.ip_provider_order = [:bogus]
+    Geokit::Geocoders.ip_provider_order = ['bogus']
     assert_equal @failure, Geokit::Geocoders::MultiGeocoder.geocode(@ip_address)
     Geokit::Geocoders.ip_provider_order = temp
   end
