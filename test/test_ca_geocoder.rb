@@ -19,7 +19,6 @@ class CaGeocoderTest < BaseGeocoderTest #:nodoc: all
     response.expects(:body).returns(CA_SUCCESS)
     url = "http://geocoder.ca/?locate=1160+West+Georgia+Street+BC+V6E3H7&auth=SOMEKEYVALUE&geoit=xml"
     Geokit::Geocoders::CaGeocoder.expects(:call_geocoder_service).with(url).returns(response)
-    #puts Geokit::Geocoders::CaGeocoder.geocode(@ca_full_loc)
     verify(Geokit::Geocoders::CaGeocoder.geocode(@ca_full_loc))
   end
 
