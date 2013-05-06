@@ -473,7 +473,10 @@ puts res.to_hash.inspect
      res = Geokit::Geocoders::GoogleGeocoder3.geocode(@google_full_loc)
 
      assert_instance_of Geokit::Bounds, res.suggested_bounds
-     assert_equal Geokit::Bounds.new(Geokit::LatLng.new(37.7908019197085, -122.395348980292), Geokit::LatLng.new(37.7934998802915, -122.392651019708)), res.suggested_bounds
+     assert_equal res.suggested_bounds.to_a[0][0], 37.7908019197085
+     assert_equal res.suggested_bounds.to_a[0][1].to_s, "-122.395348980292"
+     assert_equal res.suggested_bounds.to_a[1][0], 37.7934998802915
+     assert_equal res.suggested_bounds.to_a[1][1].to_s, "-122.392651019708"
    end
 
    def test_service_unavailable
