@@ -37,11 +37,7 @@ module Geokit
      # Formats the request in the format acceptable by the CA geocoder.
      def self.construct_request(location)
        url = ""
-       url += add_ampersand(url) + "stno=#{location.street_number}" if location.street_address
-       url += add_ampersand(url) + "addresst=#{Geokit::Inflector::url_escape(location.street_name)}" if location.street_address
-       url += add_ampersand(url) + "city=#{Geokit::Inflector::url_escape(location.city)}" if location.city
-       url += add_ampersand(url) + "prov=#{location.state}" if location.state
-       url += add_ampersand(url) + "postal=#{location.zip}" if location.zip
+       url += add_ampersand(url) + "locate=#{location.street_number}+#{Geokit::Inflector::url_escape(location.street_name)}+#{location.state}+#{location.zip}"
        url += add_ampersand(url) + "auth=#{Geokit::Geocoders::geocoder_ca}" if Geokit::Geocoders::geocoder_ca
        url += add_ampersand(url) + "geoit=xml"
        'http://geocoder.ca/?' + url

@@ -1,7 +1,7 @@
 require 'test/unit'
 require 'net/http'
 require 'rubygems'
-require 'mocha'
+require 'mocha/setup'
 require 'lib/geokit'
 
 class MockSuccess < Net::HTTPSuccess #:nodoc: all

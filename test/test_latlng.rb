@@ -1,6 +1,6 @@
 require 'test/unit'
 require 'lib/geokit'
-require 'mocha'
+require 'mocha/setup'
 
 class LatLngTest < Test::Unit::TestCase #:nodoc: all
 
