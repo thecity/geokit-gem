@@ -5,3 +5,5 @@ pkg
 nbproject
 *.swp
 Gemfile.lock
+*.idea
+coverage

@@ -16,7 +16,7 @@ module Geokit
         res = self.call_geocoder_service("http://maps.google.com/maps/geo?ll=#{Geokit::Inflector::url_escape(latlng.ll)}&output=xml&key=#{Geokit::Geocoders::google}&oe=utf-8")
         #        res = Net::HTTP.get_response(URI.parse("http://maps.google.com/maps/geo?ll=#{Geokit::Inflector::url_escape(address_str)}&output=xml&key=#{Geokit::Geocoders::google}&oe=utf-8"))
         return GeoLoc.new unless (res.is_a?(Net::HTTPSuccess) || res.is_a?(Net::HTTPOK))
-        xml = res.body
+        xml = self.transcode_to_utf8(res.body)
         logger.debug "Google reverse-geocoding. LL: #{latlng}. Result: #{xml}"
         return self.xml2GeoLoc(xml)
       end
@@ -51,7 +51,7 @@ module Geokit
         address_str = address.is_a?(GeoLoc) ? address.to_geocodeable_s : address
         res = self.call_geocoder_service("http://maps.google.com/maps/geo?q=#{Geokit::Inflector::url_escape(address_str)}&output=xml#{bias_str}&key=#{Geokit::Geocoders::google}&oe=utf-8")
         return GeoLoc.new if !res.is_a?(Net::HTTPSuccess)
-        xml = res.body
+        xml = self.transcode_to_utf8(res.body)
         logger.debug "Google geocoding. Address: #{address}. Result: #{xml}"
         return self.xml2GeoLoc(xml, address)
       end
@@ -62,8 +62,14 @@ module Geokit
           "&gl=#{bias.to_s.downcase}"
         elsif bias.is_a?(Bounds)
           # viewport biasing
-          "&ll=#{bias.center.ll}&spn=#{bias.to_span.ll}"
+          "&ll=#{precise_ll(bias.center)}&spn=#{precise_ll(bias.to_span)}"
         end
+      end
+
+      # Precision to 6 decimal places as per:
+      # https://developers.google.com/maps/documentation/staticmaps/?hl=en#Latlons
+      def self.precise_ll(loc)
+        "#{"%.6f" % loc.lat},#{"%.6f" % loc.lng}"
       end
 
       def self.xml2GeoLoc(xml, address="")
@@ -136,6 +142,16 @@ module Geokit
         res.success=true
 
         return res
+      end
+      
+      def self.transcode_to_utf8(body)
+        require 'iconv' unless String.method_defined?(:encode)
+        if String.method_defined?(:encode)
+          body.encode!('UTF-8', 'UTF-8', :invalid => :replace)
+        else
+          ic = Iconv.new('UTF-8', 'UTF-8//IGNORE')
+          body = ic.iconv(body)
+        end        
       end
     end
   end

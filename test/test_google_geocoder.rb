@@ -1,4 +1,5 @@
-require File.join(File.dirname(__FILE__), 'test_base_geocoder')
+# encoding: UTF-8
+require File.join(File.dirname(__FILE__), 'helper')
 
 Geokit::Geocoders::google = 'Google'
 
@@ -31,6 +32,25 @@ class GoogleGeocoderTest < BaseGeocoderTest #:nodoc: all
   GOOGLE_TOO_MANY=<<-EOF.strip
   <?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://earth.google.com/kml/2.0"><Response><name>100 spear st, san francisco, ca</name><Status><code>620</code><request>geocode</request></Status></Response></kml>
   EOF
+  
+  GOOGLE_UTF8_RESULT=<<-EOF
+  <?xml version="1.0" encoding="UTF-8" ?>
+  <kml xmlns="http://earth.google.com/kml/2.0"><Response>
+    <name>Mosjøen, Norway</name>
+    <Status>
+      <code>200</code>
+      <request>geocode</request>
+    </Status>
+    <Placemark id="p1">
+      <address>Mosjøen, Norway</address>
+      <AddressDetails Accuracy="4" xmlns="urn:oasis:names:tc:ciq:xsdschema:xAL:2.0"><Country><CountryNameCode>NO</CountryNameCode><CountryName>Norge</CountryName><AdministrativeArea><AdministrativeAreaName>Nordland</AdministrativeAreaName><SubAdministrativeArea><SubAdministrativeAreaName>Vefsn</SubAdministrativeAreaName><Locality><LocalityName>Mosjøen</LocalityName></Locality></SubAdministrativeArea></AdministrativeArea></Country></AddressDetails>
+      <ExtendedData>
+        <LatLonBox north="65.8551869" south="65.8186481" east="13.2574307" west="13.1293713" />
+      </ExtendedData>
+      <Point><coordinates>13.1934010,65.8369240,0</coordinates></Point>
+    </Placemark>
+  </Response></kml>
+  EOF
 
   def setup
     super
@@ -39,6 +59,8 @@ class GoogleGeocoderTest < BaseGeocoderTest #:nodoc: all
 
     @google_full_loc = Geokit::GeoLoc.new(@google_full_hash)
     @google_city_loc = Geokit::GeoLoc.new(@google_city_hash)
+    
+    @address_with_special_characters = "Mosjøen, Norway"
   end
 
   def test_google_full_address
@@ -205,7 +227,7 @@ class GoogleGeocoderTest < BaseGeocoderTest #:nodoc: all
     response = MockSuccess.new
     response.expects(:body).returns(GOOGLE_BOUNDS_BIASED_RESULT)
 
-    url = "http://maps.google.com/maps/geo?q=Winnetka&output=xml&ll=34.197693208849,-118.547160027785&spn=0.247047999999999,0.294914000000006&key=Google&oe=utf-8"
+    url = "http://maps.google.com/maps/geo?q=Winnetka&output=xml&ll=34.197693,-118.547160&spn=0.247048,0.294914&key=Google&oe=utf-8"
     Geokit::Geocoders::GoogleGeocoder.expects(:call_geocoder_service).with(url).returns(response)
 
     bounds = Geokit::Bounds.normalize([34.074081, -118.694401], [34.321129, -118.399487])
@@ -224,4 +246,19 @@ class GoogleGeocoderTest < BaseGeocoderTest #:nodoc: all
       res=Geokit::Geocoders::GoogleGeocoder.geocode(@address)
     end
   end
+  
+  def test_utf8_encoding
+    response = MockSuccess.new
+    body = GOOGLE_UTF8_RESULT
+    body = body.force_encoding('ASCII-8BIT') if body.respond_to? :force_encoding
+    response.expects(:body).returns(body)
+    url = "http://maps.google.com/maps/geo?q=#{Geokit::Inflector.url_escape(@address_with_special_characters)}&output=xml&key=Google&oe=utf-8"
+    Geokit::Geocoders::GoogleGeocoder.expects(:call_geocoder_service).with(url).returns(response)
+    res=Geokit::Geocoders::GoogleGeocoder.geocode(@address_with_special_characters)
+    assert_equal "Nordland", res.state
+    assert_equal "Mosjøen", res.city
+    assert_equal "65.836924,13.193401", res.ll
+    assert !res.is_us?
+    assert_equal "google", res.provider
+  end    
 end

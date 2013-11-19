@@ -41,12 +41,18 @@ module Geokit
         formula = options[:formula] || Geokit::default_formula
         case formula
         when :sphere
+          error_classes = [Errno::EDOM]
+
+          # Ruby 1.9 raises {Math::DomainError}, but it is not defined in Ruby
+          # 1.8. Backwards-compatibly rescue both errors.
+          error_classes << Math::DomainError if defined?(Math::DomainError)
+
           begin
             units_sphere_multiplier(units) *
                 Math.acos( Math.sin(deg2rad(from.lat)) * Math.sin(deg2rad(to.lat)) +
                 Math.cos(deg2rad(from.lat)) * Math.cos(deg2rad(to.lat)) *
                 Math.cos(deg2rad(to.lng) - deg2rad(from.lng)))
-          rescue Errno::EDOM
+          rescue *error_classes
             0.0
           end
         when :flat
@@ -351,7 +357,7 @@ module Geokit
     # 100 Spear St, San Francisco, CA, 94101, US
     # Street number and street name are extracted from the street address attribute if they don't exist
     attr_accessor :street_number, :street_name, :street_address, :city, :state, :zip, :country_code, :country
-    attr_accessor :full_address, :all, :district, :province, :sub_premise
+    attr_accessor :full_address, :all, :district, :province, :sub_premise, :neighborhood
     # Attributes set upon return from geocoding.  Success will be true for successful
     # geocode lookups.  The provider will be set to the name of the providing geocoder.
     # Finally, precision is an indicator of the accuracy of the geocoding.
@@ -443,7 +449,13 @@ module Geokit
     end
 
     def to_yaml_properties
-      (instance_variables - ['@all']).sort
+      (instance_variables - ['@all', :@all]).sort
+    end
+
+    def encode_with(coder)
+      to_yaml_properties.each do |name|
+        coder[name[1..-1].to_s] = instance_variable_get(name.to_s)
+      end
     end
 
     # Returns a string representation of the instance.
@@ -545,4 +557,50 @@ module Geokit
       end
     end
   end
+  
+  # A complex polygon made of multiple points.  End point must equal start point to close the poly.
+  class Polygon
+    
+    attr_accessor :poly_y, :poly_x
+    
+    def initialize(points)
+      # Pass in an array of Geokit::LatLng
+      @poly_x = []
+      @poly_y = []
+
+      points.each do |point|
+        @poly_x << point.lng
+        @poly_y << point.lat
+      end
+      
+      # A Polygon must be 'closed', the last point equal to the first point
+      if not @poly_x[0] == @poly_x[-1] or not @poly_y[0] == @poly_y[-1]
+        # Append the first point to the array to close the polygon
+        @poly_x << @poly_x[0]
+        @poly_y << @poly_y[0]
+      end
+      
+    end
+
+    def contains?(point)
+      j = @poly_x.length - 1
+      oddNodes = false
+      x = point.lng
+      y = point.lat
+
+      for i in (0..j)
+        if (@poly_y[i] < y && @poly_y[j] >= y ||
+            @poly_y[j] < y && @poly_y[i] >= y)
+          if (@poly_x[i] + (y - @poly_y[i]) / (@poly_y[j] - @poly_y[i]) * (@poly_x[j] - @poly_x[i]) < x)
+            oddNodes = !oddNodes
+          end
+        end
+ 
+        j=i
+      end
+
+      oddNodes
+    end # contains?
+  end # class Polygon
+  
 end
